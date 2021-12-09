@@ -30,7 +30,7 @@ case class MyApi(datastore: Datastore) extends GenericSchema[Any] {
 
   private def fetchTopEntities =
       datastore.fetchTopEntities()
-      .flatMap(entities => ZQuery.collectAll(entities.map(buildTopEntity)))
+      .flatMap(entities => ZQuery.collectAllBatched(entities.map(buildTopEntity)))
 
   private def buildTopEntity(topEntity: db.TopEntity) =
     datastore
