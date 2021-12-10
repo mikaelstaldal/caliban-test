@@ -1,4 +1,4 @@
-name := "graphql-service"
+name := "caliban-test"
 
 scalaVersion := "2.13.7"
 
