@@ -18,9 +18,15 @@ libraryDependencies ++= Seq(
   "com.github.ghostdogpr"         %% "caliban"                       % calibanV,
   "com.github.ghostdogpr"         %% "caliban-zio-http"              % calibanV,
   "org.slf4j"                      % "slf4j-simple"                  % "1.7.32",
-  "dev.zio"                       %% "zio-test"                      % zioTestV % "test",
-  "dev.zio"                       %% "zio-test-sbt"                  % zioTestV % "test",
-  "com.softwaremill.sttp.client3" %% "httpclient-backend-zio"        % sttpV    % "test"
+  "dev.zio"                       %% "zio-test"                      % zioTestV % "test,it",
+  "dev.zio"                       %% "zio-test-sbt"                  % zioTestV % "test,it",
+  "com.softwaremill.sttp.client3" %% "httpclient-backend-zio"        % sttpV    % "it"
 )
 
 testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
+
+lazy val root = (project in file("."))
+  .configs(IntegrationTest)
+  .settings(
+    Defaults.itSettings
+  )

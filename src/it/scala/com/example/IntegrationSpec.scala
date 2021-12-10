@@ -6,7 +6,6 @@ import sttp.model.MediaType
 import zio.clock
 import zio.test._
 import zio.test.environment.Live
-
 import java.time.Duration
 
 object IntegrationSpec extends DefaultRunnableSpec {
