@@ -1,27 +1,25 @@
 package com.example.api
 
 import caliban.GraphQL.graphQL
+import caliban.{GraphQL, RootResolver}
 import caliban.schema.Annotations.GQLDescription
 import caliban.schema.GenericSchema
 import caliban.wrappers.Wrappers._
-import caliban.{GraphQL, RootResolver}
 import com.example.db
 import com.example.db.Datastore
-import zio.Has
-import zio.clock.Clock
 import zio.console.Console
 import zio.query.{Query, ZQuery}
+import zio.{Has, ZIO, ZLayer}
 
 import scala.language.postfixOps
 
 case class MyApi(datastore: Datastore) extends GenericSchema[Any] {
-
   case class Queries(
     @GQLDescription("Return all top entities")
     topEntities: Query[Throwable, Seq[TopEntity]]
   )
 
-  val api: GraphQL[Console with Clock with Has[Datastore]] =
+  val api: GraphQL[Console] =
     graphQL(
       RootResolver(
         Queries(fetchTopEntities)
@@ -42,4 +40,9 @@ case class MyApi(datastore: Datastore) extends GenericSchema[Any] {
           sub = subEntity
         )
       )
+}
+
+object MyApi {
+  def layer: ZLayer[Has[Datastore], Nothing, Has[MyApi]] =
+    ZIO.service[Datastore].map(MyApi.apply).toLayer
 }

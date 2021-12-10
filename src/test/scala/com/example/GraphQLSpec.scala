@@ -1,37 +1,32 @@
 package com.example
 
-import sttp.client3.httpclient.zio.{send, HttpClientZioBackend}
-import sttp.client3.{basicRequest, UriContext}
-import sttp.model.MediaType
-import zio.clock
+import caliban.ResponseValue.{ListValue, ObjectValue}
+import caliban.Value.IntValue.LongNumber
+import caliban.Value.StringValue
+import com.example.Main.dataSourceLayer
+import com.example.api.MyApi
+import com.example.db.DatastoreLive
+import zio.ZIO
 import zio.test._
-import zio.test.environment.Live
-
-import java.time.Duration
 
 object GraphQLSpec extends DefaultRunnableSpec {
-  def spec = suite("GraphQL Spec")(
+  def spec = suite("Testing GraphQL layer directly")(
     testM("GraphQL") {
-      for {
-        _        <- Main.run(List()).fork
-        _        <- Live.live(clock.sleep(Duration.ofSeconds(2))) // There is probably a better zio-ish way to do this
-        response <-
-          send(
-            basicRequest
-              .post(uri"http://localhost:8090/api/graphql")
-              .contentType(MediaType.ApplicationJson)
-              .body("""{
-                      |    "query": "{topEntities {id name sub {id name}}}",
-                      |    "variables": null
-                      |}""".stripMargin)
-          )
-            .map(_.body)
-            .provideCustomLayer(HttpClientZioBackend.layer())
-      } yield assertTrue(
-        response == Right(
-          "{\"data\":{\"topEntities\":[{\"id\":1,\"name\":\"First\",\"sub\":{\"id\":1,\"name\":\"One\"}},{\"id\":2,\"name\":\"Second\",\"sub\":{\"id\":1,\"name\":\"One\"}},{\"id\":3,\"name\":\"Third\",\"sub\":{\"id\":2,\"name\":\"Two\"}}]}}"
-        )
-      )
+      (for {
+        myApi       <- ZIO.service[MyApi]
+        api          = myApi.api
+        interpreter <- api.interpreter
+        response <- interpreter.execute("{topEntities {id name sub {id name}}}")
+      } yield
+        assertTrue(
+          response.data ==
+            ObjectValue(List("topEntities" -> ListValue(List(
+              ObjectValue(List("id" -> LongNumber(1), "name" -> StringValue("First"), "sub" -> ObjectValue(List("id" -> LongNumber(1), "name" -> StringValue("One"))))),
+              ObjectValue(List("id" -> LongNumber(2), "name" -> StringValue("Second"), "sub" -> ObjectValue(List("id" -> LongNumber(1), "name" -> StringValue("One"))))),
+              ObjectValue(List("id" -> LongNumber(3), "name" -> StringValue("Third"), "sub" -> ObjectValue(List("id" -> LongNumber(2), "name" -> StringValue("Two")))))
+            ))))
+        ))
+        .provideCustomLayer((dataSourceLayer >>> DatastoreLive.layer) >>> MyApi.layer)
     }
   )
 }

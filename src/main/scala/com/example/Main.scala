@@ -2,7 +2,7 @@ package com.example
 
 import caliban.ZHttpAdapter
 import com.example.api.MyApi
-import com.example.db.{Datastore, DatastoreLive}
+import com.example.db.DatastoreLive
 import com.typesafe.config.{Config, ConfigFactory}
 import io.getquill._
 import io.getquill.context.ZioJdbc.DataSourceLayer
@@ -19,7 +19,7 @@ object Main extends App {
 
   private lazy val config: Config = ConfigFactory.load().getConfig("ctx")
 
-  private lazy val zioDS: ZLayer[Any, Throwable, Has[DataSource]] =
+  lazy val dataSourceLayer: ZLayer[Any, Throwable, Has[DataSource]] =
     DataSourceLayer.fromConfig(config).flatMap { ds =>
       // This is ugly, and there is probably a better, more zio-ish and quill-ish way to do it.
       val conn = ds.get.getConnection
@@ -65,8 +65,8 @@ object Main extends App {
 
   override def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
     (for {
-      datastore   <- ZIO.service[Datastore]
-      api          = MyApi(datastore).api
+      myApi       <- ZIO.service[MyApi]
+      api          = myApi.api
       interpreter <- api.interpreter
       _           <- Server
                        .start(
@@ -84,6 +84,6 @@ object Main extends App {
                        )
                        .forever
     } yield ())
-      .provideCustomLayer(zioDS >>> DatastoreLive.layer)
+      .provideCustomLayer((dataSourceLayer >>> DatastoreLive.layer) >>> MyApi.layer)
       .exitCode
 }
